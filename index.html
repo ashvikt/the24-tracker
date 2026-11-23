@@ -283,10 +283,11 @@ var GOAL_OF = {}; GOALS.forEach(function(g){ GOAL_OF[g.id] = g; });
 var GAMES = [
   {id:'rl', name:'Rocket League', rule:'Win 7-1, any game mode', est:'30 min to 2 hr'},
   {id:'fn', name:'Fortnite', rule:'Pick one', opts:['Solo win','Squad win with 15+ kills combined'], est:'30 min to 3+ hr'},
-  {id:'mc', name:'Minecraft', rule:'Beat the Ender Dragon', est:'2 to 6 hr'},
+  {id:'mc', name:'Minecraft', rule:'Beat the Ender Dragon. Everyone can play together on one server', est:'1.5 to 4 hr'},
   {id:'ssb', name:'Smash', rule:'1v2 vs level 9 CPUs', est:'30 min to 2 hr'},
-  {id:'botw', name:'Breath of the Wild', rule:'Beat Ganon', est:'3 to 8 hr'},
-  {id:'puz', name:'100 piece puzzle', rule:'Finish it', est:'30 to 60 min'},
+  {id:'botw', name:'Breath of the Wild', rule:'Beat Ganon. Start right after the Great Plateau', est:'1 to 4 hr'},
+  {id:'puz', name:'Puzzle', rule:'Finish it', est:'30 to 60 min'},
+  {id:'doors', name:'Roblox Doors', rule:'Reach door 100 and beat it', est:'45 min to 2 hr'},
   {id:'open', name:'Open slot', rule:'Pick one', opts:['Mario Kart Grand Prix cup win','Fall Guys crown'], est:'20 to 60 min'}
 ];
 var GAME_OF = {}; GAMES.forEach(function(g){ GAME_OF[g.id] = g; });
@@ -312,21 +313,21 @@ var FOOD = [
 
 /* hour-by-hour plan, offset 0 = noon Tuesday. A suggestion, not a rule. */
 var PLAN = [
-  ['Kickoff','Start Breath of the Wild on Setup A and Minecraft on Setup B. Everyone else lifts, legs and back first.'],
+  ['Kickoff','Start Breath of the Wild and Minecraft. Everyone else lifts, legs and back first.'],
   ['Lift block','Keep lifting in pairs. Log pounds as you go. Push-up sets every 15 minutes.'],
   ['Food run 1','Burger King and Popeyes on George St, plus McDonald\'s. Daylight miles can start.'],
   ['Daylight miles','Run or walk outside while it is light. About 2.5 miles each gets you halfway.'],
-  ['Free throws','Shoot outside before dark, sunset is around 4:40 PM. Swap controller players.'],
+  ['Free throws','Shoot outside before dark, sunset is around 4:40 PM.'],
   ['Food run 2','Dave\'s and Chick-fil-A on Route 18. Eat the sandwiches.'],
   ['Last food run','Namkeen and Wendy\'s. Namkeen closes at 10 PM. Place the pizza order.'],
-  ['Pizza','Pick up and eat. Rocket League and Fortnite go on Setup B.'],
+  ['Pizza','Pick up and eat. Rocket League and Fortnite go on.'],
   ['Smash block','1v2 against level 9 CPUs. Pull-up sets in between.'],
-  ['Puzzle','Start the 100 piece puzzle. Low effort, good while eating.'],
+  ['Puzzle','Start the puzzle. Low effort, good while eating.'],
   ['Wings','Wings are due. Chick-fil-A and Namkeen are closed after 10 PM, so those sandwiches must be done.'],
   ['Indoor miles','If it is cold, finish miles on a treadmill or laps indoors.'],
   ['Midnight check','Open HQ and compare against the white pace ticks. Doughnuts.'],
   ['Night grind','Easy games (Mario Kart, Fall Guys). Push-up sets continue. 20 minute naps in rotation.'],
-  ['Night grind','Finish the puzzle. Keep the controllers moving every 45 minutes.'],
+  ['Night grind','Finish the puzzle. Rotate who is on the controllers.'],
   ['Night grind','Stay fed and sip water. Salt your food. Nobody works out alone.'],
   ['Night grind','Rotate players on the long games. Check who is furthest behind.'],
   ['Night grind','Push-up catch-up. Short sets only.'],
@@ -740,9 +741,7 @@ function vGames(){
       '<div class="gtools">' + timer + tbtn + tries + '</div>' +
       '<div class="grow">' + by + '<button class="go" data-a="gdone" data-g="' + g.id + '">' + (won ? 'Won' : 'Mark won') + '</button></div></div>';
   }).join('');
-  return '<h2>Setups</h2><div class="setups">' + setupCard('A') + setupCard('B') + '</div>' +
-    '<p class="note">Rotate who has the controller every 45 minutes so nobody is stuck on the long games while their reps pile up.</p>' +
-    '<h2>Games</h2><div class="list">' + cards + '</div>';
+  return '<h2>Games</h2><div class="list">' + cards + '</div>';
 }
 
 function proj(lat, lng){ return {x: (lng + 74.495) * 3800, y: (40.505 - lat) * 5000}; }
