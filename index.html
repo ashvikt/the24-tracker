@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The 24 Tracker</title>
+<meta name="theme-color" content="#0d1016">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="The 24">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: scoreboard header pinned on top, one thumb-reachable tab bar at the bottom, one screen per job. */
+:root{
+  --bg:#0d1016;
+  --panel:#161b24;
+  --panel2:#1e2531;
+  --line:#2c3441;
+  --ink:#f4efe6;
+  --mute:#99a3b2;
+  --scar:#ff2e4d;
+  --scar-dim:#7a1426;
+  --ok:#3fd89a;
+  --warn:#ffb42a;
+  --bad:#ff6b6b;
+  --display:'Anton','Impact','Arial Narrow',sans-serif;
+  --cond:'Barlow Condensed','Arial Narrow',sans-serif;
+  --body:'Barlow','Helvetica Neue',Arial,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.35;-webkit-text-size-adjust:100%}
+button,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--scar);outline-offset:2px}
+.app{max-width:720px;margin:0 auto;min-height:100%;padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+
+/* header */
+.hd{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,#0d1016 78%,rgba(13,16,22,0));padding:calc(10px + env(safe-area-inset-top)) 16px 14px}
+.hd-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.kick{font-family:var(--cond);font-weight:600;letter-spacing:.12em;font-size:13px;color:var(--mute);text-transform:uppercase}
+.sync{font-family:var(--cond);font-weight:700;font-size:12px;letter-spacing:.1em;border:1px solid var(--line);border-radius:99px;padding:3px 9px;color:var(--mute);white-space:nowrap}
+.sync.live{color:var(--ok);border-color:#1f6b4d}
+.clockwrap{margin-top:4px}
+.clock-l{font-family:var(--cond);font-weight:700;letter-spacing:.2em;font-size:13px;color:var(--scar);text-transform:uppercase}
+.clock{font-family:var(--display);font-size:clamp(56px,17vw,104px);line-height:1;letter-spacing:.01em;font-variant-numeric:tabular-nums;margin:2px 0 8px}
+.tbar{height:8px;background:var(--panel2);border-radius:99px;overflow:hidden}
+.tbar i{display:block;height:100%;width:0;background:var(--scar);border-radius:99px}
+
+/* views */
+main{padding:6px 16px 0}
+h2{font-family:var(--display);font-weight:400;font-size:28px;letter-spacing:.02em;margin:18px 0 10px;text-transform:uppercase}
+h3{font-family:var(--cond);font-weight:700;font-size:20px;margin:0;letter-spacing:.02em}
+.note{color:var(--mute);font-size:14px;margin:8px 0}
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.tile .k{font-family:var(--cond);font-weight:600;letter-spacing:.12em;font-size:12px;color:var(--mute);text-transform:uppercase}
+.tile .v{font-family:var(--display);font-size:42px;line-height:1.05;font-variant-numeric:tabular-nums}
+.tile .v small{font-size:20px;color:var(--mute)}
+.list{display:flex;flex-direction:column;gap:10px}
+.row{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.rh{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.rn{font-family:var(--cond);font-weight:700;font-size:19px;letter-spacing:.02em}
+.rv{font-family:var(--cond);font-weight:500;font-size:18px;color:var(--mute);margin:2px 0 8px;font-variant-numeric:tabular-nums}
+.rv b{color:var(--ink);font-weight:700;font-size:26px}
+.rv small{font-size:14px}
+.bar{position:relative;height:10px;background:var(--panel2);border-radius:99px;overflow:visible}
+.bar i{display:block;height:100%;background:var(--scar);border-radius:99px;max-width:100%}
+.bar b{position:absolute;top:-4px;width:2px;height:18px;background:var(--ink);opacity:.7;border-radius:2px}
+.pill{font-family:var(--cond);font-weight:700;font-size:12px;letter-spacing:.1em;border-radius:99px;padding:2px 9px;border:1px solid var(--line);color:var(--mute);white-space:nowrap}
+.pill.ok{color:var(--ok);border-color:#1f6b4d}
+.pill.warn{color:var(--warn);border-color:#7a5a12}
+.pill.bad{color:var(--bad);border-color:#7a2a2a}
+.pill.done{background:var(--ok);color:#06241a;border-color:var(--ok)}
+.btns{display:flex;gap:8px;margin-top:10px}
+.btns button{flex:1;min-height:46px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);font-family:var(--cond);font-weight:700;font-size:20px}
+.btns button.plus{background:var(--scar);border-color:var(--scar);color:#fff}
+.btns button.minus{flex:0 0 64px;color:var(--mute)}
+.btns button:active{transform:scale(.97)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 6px;-webkit-overflow-scrolling:touch}
+.chip{flex:0 0 auto;min-height:40px;padding:0 14px;border-radius:99px;border:1px solid var(--line);background:var(--panel);font-family:var(--cond);font-weight:700;font-size:17px;letter-spacing:.03em}
+.chip.on{background:var(--scar);border-color:var(--scar);color:#fff}
+.who-line{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:8px 0 4px}
+.who-line .big{font-family:var(--display);font-size:34px;text-transform:uppercase}
+.who-line span{color:var(--mute);font-size:14px}
+.cta{width:100%;min-height:48px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);font-family:var(--cond);font-weight:700;font-size:18px;letter-spacing:.06em;text-transform:uppercase;margin-top:12px}
+textarea.copybox{width:100%;min-height:150px;margin-top:10px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px;font:14px/1.4 var(--body)}
+
+/* team matrix */
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:560px;font-family:var(--cond)}
+th,td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--line);font-size:15px;font-variant-numeric:tabular-nums}
+th{font-weight:600;letter-spacing:.08em;color:var(--mute);font-size:12px;text-transform:uppercase}
+td.nm{text-align:left;padding-left:12px;font-weight:700;font-size:17px}
+td.nm button{background:none;border:0;padding:0;font:inherit;font-weight:700;color:var(--ink);text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:4px}
+td.c{background:linear-gradient(to top,rgba(255,46,77,.55) calc(var(--p) * 100%),transparent 0)}
+td.tot{font-weight:700;color:var(--ink)}
+tr:last-child td{border-bottom:0}
+
+/* games */
+.game{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.game.won{border-color:#1f6b4d;background:#10211c}
+.game .rule{color:var(--mute);font-size:15px;margin:2px 0 8px}
+.game .est{font-family:var(--cond);font-weight:600;font-size:13px;letter-spacing:.08em;color:var(--mute);text-transform:uppercase}
+.seg{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.seg button{flex:1 1 140px;min-height:42px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);padding:6px 10px;font-weight:500;font-size:14px}
+.seg button.on{border-color:var(--scar);background:var(--scar-dim);color:#fff}
+.grow{display:flex;gap:8px;align-items:center;margin-top:8px}
+.grow select{flex:1;min-height:44px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:0 10px}
+.grow button{flex:1;min-height:44px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);font-family:var(--cond);font-weight:700;font-size:18px;letter-spacing:.05em;text-transform:uppercase}
+.grow button.go{background:var(--scar);border-color:var(--scar);color:#fff}
+.won .grow button.go{background:var(--ok);border-color:var(--ok);color:#06241a}
+
+/* fuel */
+.macro{display:grid;grid-template-columns:1fr repeat(4,56px);gap:6px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);font-family:var(--cond);font-size:17px}
+.macro:last-child{border-bottom:0}
+.macro.h{font-size:12px;letter-spacing:.1em;color:var(--mute);text-transform:uppercase;font-weight:600}
+.macro span:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.macro.t{font-weight:700;font-size:19px}
+.mbars{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.mb{display:grid;grid-template-columns:70px 1fr 96px;gap:8px;align-items:center;font-family:var(--cond);font-size:16px}
+.mb em{font-style:normal;color:var(--mute);text-align:right;font-variant-numeric:tabular-nums}
+
+/* map */
+.mapbox{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.mapbox svg{display:block;width:100%;height:auto}
+.stop{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;grid-template-columns:36px 1fr;gap:4px 12px}
+.stop.got{border-color:#1f6b4d;background:#10211c}
+.stop .no{grid-row:span 3;width:36px;height:36px;border-radius:50%;background:var(--scar);color:#fff;font-family:var(--display);display:flex;align-items:center;justify-content:center;font-size:19px}
+.stop.got .no{background:var(--ok);color:#06241a}
+.stop .meta{color:var(--mute);font-size:14px}
+.stop .meta b{color:var(--ink);font-weight:600}
+.stop .acts{display:flex;gap:8px;margin-top:6px}
+.stop .acts a,.stop .acts button{flex:1;min-height:42px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);display:flex;align-items:center;justify-content:center;text-align:center;font-family:var(--cond);font-weight:700;font-size:17px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink);text-decoration:none}
+.stop .acts a.dir{background:var(--scar);border-color:var(--scar);color:#fff}
+a.route{display:flex;align-items:center;justify-content:center;min-height:50px;border-radius:10px;background:var(--scar);color:#fff;text-decoration:none;font-family:var(--cond);font-weight:700;font-size:19px;letter-spacing:.06em;text-transform:uppercase;margin-top:12px}
+
+/* nav */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(13,16,22,.96);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
+.navin{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+nav button{min-height:52px;border:0;border-radius:10px;background:none;color:var(--mute);font-family:var(--cond);font-weight:700;font-size:14px;letter-spacing:.08em;text-transform:uppercase}
+nav button.on{color:#fff;background:var(--panel2);box-shadow:inset 0 -3px 0 var(--scar)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="hd">
+    <div class="hd-row">
+      <div class="kick">Tue Nov 24, 12 PM to Wed Nov 25, 12 PM</div>
+      <span class="sync" id="sync">THIS DEVICE ONLY</span>
+    </div>
+    <div class="clockwrap">
+      <div class="clock-l" id="cl">Starts in</div>
+      <div class="clock" id="ck">--:--:--</div>
+      <div class="tbar"><i id="tb"></i></div>
+    </div>
+  </header>
+  <main id="main"></main>
+</div>
+<nav><div class="navin" id="nav"></div></nav>
+
+<script>
+"use strict";
+var START = Date.parse('2026-11-24T12:00:00-05:00');
+var DUR = 24 * 3600 * 1000;
+var PEOPLE = ['Sriram','Ryan','Prashanth','Ashvik','Atharva','Rishik','Ishaan'];
+var ORIGIN = '42 Biel Rd W, New Brunswick, NJ 08901';
+
+var GOALS = [
+  {id:'miles', name:'Miles', unit:'mi', per:5, steps:[0.5,1], dec:1, short:'MI'},
+  {id:'pull', name:'Pull-ups', unit:'reps', per:100, steps:[5,10], short:'PU'},
+  {id:'lbs', name:'Weight moved (no bodyweight)', unit:'lbs', per:10000, steps:[500,1000], short:'LB'},
+  {id:'push', name:'Push-ups', unit:'reps', per:1000, steps:[25,100], short:'PS'},
+  {id:'ft', name:'Free throws made', unit:'made', per:50, steps:[1,5], short:'FT'},
+  {id:'pizza', name:'Medium pizza', unit:'pizzas', per:8, steps:[1,2], scale:1/8, dec:1, short:'PZ', stepLabel:'slice'},
+  {id:'dough', name:'Doughnuts', unit:'', per:5, steps:[1], short:'DN'},
+  {id:'sand', name:'Sandwich', unit:'', per:1, steps:[1], short:'SW'},
+  {id:'wings', name:'Boneless wings', unit:'wings', per:15, steps:[1,5], short:'WG'}
+];
+
+var GAMES = [
+  {id:'rl', name:'Rocket League', rule:'Win 7-1, any game mode', est:'30 min to 2 hr'},
+  {id:'fn', name:'Fortnite', rule:'Pick one', opts:['Solo win','Squad win with 15+ kills combined'], est:'30 min to 3+ hr'},
+  {id:'mc', name:'Minecraft', rule:'Beat the Ender Dragon', est:'2 to 6 hr'},
+  {id:'ssb', name:'Smash', rule:'1v2 vs level 9 CPUs', est:'30 min to 2 hr'},
+  {id:'botw', name:'Breath of the Wild', rule:'Beat Ganon', est:'3 to 8 hr'},
+  {id:'puz', name:'100 piece puzzle', rule:'Finish it', est:'30 to 60 min'},
+  {id:'open', name:'Open slot', rule:'Pick one', opts:['Mario Kart Grand Prix cup win','Fall Guys crown'], est:'20 to 60 min'}
+];
+
+/* Route order is the suggested driving loop. Hours are the usual Tue/Wed hours from Google listings. */
+var STOPS = [
+  {id:'bk', name:'Burger King', who:'Prashanth', addr:'373 George St, New Brunswick, NJ 08901', hrs:'7:30 AM to 11:30 PM', mi:'1', lat:40.49544, lng:-74.44380, dx:-10, lx:-13, ly:-6, an:'end'},
+  {id:'pop', name:'Popeyes', who:'Sriram', addr:'375 George St, New Brunswick, NJ 08901', hrs:'10:30 AM to 2:30 AM', mi:'1', lat:40.49556, lng:-74.44371, dx:10, lx:13, ly:-6, an:'start'},
+  {id:'mcd', name:"McDonald's", who:'Atharva', addr:'666 Somerset St, New Brunswick, NJ 08901', hrs:'Open 24 hours', mi:'1.5', lat:40.485802, lng:-74.47039, dx:0, lx:13, ly:4, an:'start'},
+  {id:'wen', name:"Wendy's", who:'Ishaan', addr:'1504 Livingston Ave, North Brunswick, NJ 08902', hrs:'8 AM to 2 AM', mi:'3', lat:40.45701, lng:-74.47958, dx:0, lx:13, ly:4, an:'start'},
+  {id:'nam', name:'Namkeen Hot Chicken', who:'Rishik', addr:'540 Milltown Rd Ste 7, North Brunswick, NJ 08902', hrs:'12 PM to 10 PM', mi:'2', lat:40.46536, lng:-74.45265, dx:0, lx:13, ly:4, an:'start'},
+  {id:'dave', name:"Dave's Hot Chicken", who:'Ashvik', addr:'326 NJ-18, East Brunswick, NJ 08816', hrs:'10:30 AM to 12 AM', mi:'2.5', lat:40.45463, lng:-74.39924, dx:0, lx:-13, ly:4, an:'end'},
+  {id:'cfa', name:'Chick-fil-A', who:'Ryan', addr:'371 NJ-18, East Brunswick, NJ 08816', hrs:'6:30 AM to 10 PM', mi:'3', lat:40.45056, lng:-74.39845, dx:0, lx:-13, ly:4, an:'end'}
+];
+var STOP_OF = {}; STOPS.forEach(function(s){ STOP_OF[s.who] = s; });
+
+/* Estimated macros for one person's full share. Real values vary by shop. */
+var FOOD = [
+  {id:'pizza', name:'Medium pizza (whole)', kcal:1600, p:70, c:190, f:65},
+  {id:'dough', name:'5 doughnuts', kcal:1250, p:15, c:155, f:70},
+  {id:'sand', name:'1 sandwich', kcal:650, p:30, c:55, f:33},
+  {id:'wings', name:'15 boneless wings', kcal:1200, p:70, c:75, f:65}
+];
+
+var S = {progress:{}, games:{}, stops:{}};
+var view = 'hq';
+var me = PEOPLE[0];
+var DB = null;
+var syncState = 'local';
+
+/* ---------- storage ---------- */
+function lsGet(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }
+function lsSet(k,v){ try { localStorage.setItem(k,v); } catch(e){} }
+function num(x){ x = Number(x); return isFinite(x) && x > 0 ? x : 0; }
+function cleanProg(d){
+  var o = {};
+  GOALS.forEach(function(g){ o[g.id] = num(d && d[g.id]); });
+  return o;
+}
+function cleanGames(d){
+  var o = {};
+  GAMES.forEach(function(g){
+    var v = d && d[g.id];
+    if (!v) return;
+    var e = {done: v.done === true};
+    if (g.opts && g.opts.indexOf(v.opt) > -1) e.opt = v.opt;
+    if (v.by === 'Team' || PEOPLE.indexOf(v.by) > -1) e.by = v.by;
+    o[g.id] = e;
+  });
+  return o;
+}
+function cleanStops(d){
+  var o = {};
+  STOPS.forEach(function(s){ if (d && d[s.id] === true) o[s.id] = true; });
+  return o;
+}
+function loadLocal(){
+  var raw = lsGet('c24:state');
+  if (raw) {
+    try {
+      var j = JSON.parse(raw);
+      PEOPLE.forEach(function(p){ if (j.progress && j.progress[p]) S.progress[p] = cleanProg(j.progress[p]); });
+      S.games = cleanGames(j.games);
+      S.stops = cleanStops(j.stops);
+    } catch(e){}
+  }
+  var m = lsGet('c24:me');
+  if (m && PEOPLE.indexOf(m) > -1) me = m;
+}
+function persistLocal(){ lsSet('c24:state', JSON.stringify(S)); }
+function prog(p){ if (!S.progress[p]) S.progress[p] = cleanProg({}); return S.progress[p]; }
+
+function watchWrite(r){ if (r && typeof r.catch === 'function') r.catch(function(){ setSync('local'); }); }
+function saveProgress(p){
+  persistLocal();
+  if (DB) { try { watchWrite(DB.doc('progress/' + p).set(prog(p))); } catch(e){ setSync('local'); } }
+}
+function saveShared(){
+  persistLocal();
+  if (DB) { try { watchWrite(DB.doc('meta/shared').set({games:S.games, stops:S.stops})); } catch(e){ setSync('local'); } }
+}
+
+/* ---------- math ---------- */
+function now(){ return Date.now(); }
+function frac(){ return Math.max(0, Math.min(1, (now() - START) / DUR)); }
+function pct(p, g){ return Math.min(1, prog(p)[g.id] / g.per); }
+function teamVal(g){ var t = 0; PEOPLE.forEach(function(p){ t += prog(p)[g.id]; }); return t; }
+function personPct(p){ var t = 0; GOALS.forEach(function(g){ t += pct(p,g); }); return t / GOALS.length; }
+function gamesDone(){ var n = 0; GAMES.forEach(function(g){ if (S.games[g.id] && S.games[g.id].done) n++; }); return n; }
+function teamPct(){
+  var t = 0;
+  GOALS.forEach(function(g){ t += Math.min(1, teamVal(g) / (g.per * PEOPLE.length)); });
+  t += gamesDone() / GAMES.length;
+  return t / (GOALS.length + 1);
+}
+function r1(x){ return Math.round(x * 10) / 10; }
+function fmt(x, g){
+  var v = g && g.dec ? r1(x) : Math.round(x);
+  return v.toLocaleString('en-US');
+}
+function status(p){
+  var f = frac();
+  if (p >= 1) return {c:'done', t:'DONE'};
+  if (now() < START) return {c:'', t:'NOT STARTED'};
+  if (p >= f - 0.08) return {c:'ok', t:'ON PACE'};
+  if (p >= f - 0.25) return {c:'warn', t:'FALLING BEHIND'};
+  return {c:'bad', t:'BEHIND'};
+}
+function pad(n){ return n < 10 ? '0' + n : '' + n; }
+function bar(p, tick){
+  return '<div class="bar"><i style="width:' + (p * 100).toFixed(1) + '%"></i>' +
+    (tick != null ? '<b style="left:' + (tick * 100).toFixed(1) + '%"></b>' : '') + '</div>';
+}
+function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function gmapsDir(addr){
+  return 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(ORIGIN) +
+    '&destination=' + encodeURIComponent(addr) + '&travelmode=driving';
+}
+function gmapsRoute(){
+  var parts = [ORIGIN].concat(STOPS.map(function(s){ return s.addr; }), [ORIGIN]);
+  return 'https://www.google.com/maps/dir/' + parts.map(encodeURIComponent).join('/');
+}
+
+/* ---------- timer ---------- */
+function tick(){
+  var t = now(), ck = document.getElementById('ck'), cl = document.getElementById('cl'), tb = document.getElementById('tb');
+  var ms, label;
+  if (t < START) { ms = START - t; label = 'Starts in'; tb.style.width = '0%'; }
+  else if (t < START + DUR) { ms = START + DUR - t; label = 'Time left'; tb.style.width = (frac() * 100).toFixed(2) + '%'; }
+  else { ms = 0; label = 'Time. Final tally below'; tb.style.width = '100%'; }
+  var s = Math.floor(ms / 1000), d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), x = s % 60;
+  ck.textContent = (d > 0 ? d + 'd ' : '') + pad(h) + ':' + pad(m) + ':' + pad(x);
+  cl.textContent = label;
+}
+
+/* ---------- views ---------- */
+function vHQ(){
+  var rows = '';
+  GOALS.forEach(function(g){
+    var tot = g.per * PEOPLE.length, v = teamVal(g), p = Math.min(1, v / tot), st = status(p), sc = g.scale || 1;
+    rows += '<div class="row"><div class="rh"><span class="rn">' + esc(g.name) + '</span><span class="pill ' + st.c + '">' + st.t + '</span></div>' +
+      '<div class="rv"><b>' + fmt(v * sc, g) + '</b> / ' + fmt(tot * sc, g) + ' <small>' + esc(g.unit) + '</small></div>' +
+      bar(p, now() < START ? null : frac()) + '</div>';
+  });
+  var gd = gamesDone(), gp = gd / GAMES.length, gst = status(gp);
+  rows += '<div class="row"><div class="rh"><span class="rn">Games won</span><span class="pill ' + gst.c + '">' + gst.t + '</span></div>' +
+    '<div class="rv"><b>' + gd + '</b> / ' + GAMES.length + '</div>' + bar(gp, now() < START ? null : frac()) + '</div>';
+  var tp = Math.round(teamPct() * 100);
+  return '<div class="tiles"><div class="tile"><div class="k">Team total</div><div class="v">' + tp + '<small>%</small></div></div>' +
+    '<div class="tile"><div class="k">Games</div><div class="v">' + gd + '<small> / ' + GAMES.length + '</small></div></div></div>' +
+    '<h2>Scoreboard</h2><div class="list">' + rows + '</div>' +
+    '<p class="note">The white tick on each bar is where the team should be right now if the work is spread evenly across all 24 hours.</p>' +
+    '<button class="cta" data-a="copy">Copy status for the group chat</button><div id="copyout"></div>';
+}
+
+function vMe(){
+  var chips = PEOPLE.map(function(p){ return '<button class="chip' + (p === me ? ' on' : '') + '" data-a="who" data-p="' + p + '">' + p + '</button>'; }).join('');
+  var pr = prog(me), rows = '';
+  GOALS.forEach(function(g){
+    var v = pr[g.id], p = Math.min(1, v / g.per), done = v >= g.per, sc = g.scale || 1, unit = g.unit;
+    var lab = g.stepLabel || '';
+    var minus = '<button class="minus" data-a="inc" data-g="' + g.id + '" data-d="' + (-g.steps[0]) + '" aria-label="Subtract">-' + g.steps[0] + '</button>';
+    var plus = g.steps.map(function(s, i){
+      return '<button class="' + (i === 0 ? 'plus' : '') + '" data-a="inc" data-g="' + g.id + '" data-d="' + s + '">+' + s.toLocaleString('en-US') + (lab ? ' ' + lab + (s > 1 ? 's' : '') : '') + '</button>';
+    }).join('');
+    var shown = g.id === 'pizza' ? r1(v) + ' / ' + g.per + ' <small>slices</small>' : fmt(v, g) + ' / ' + fmt(g.per, g) + ' <small>' + esc(unit) + '</small>';
+    rows += '<div class="row"><div class="rh"><span class="rn">' + esc(g.name) + '</span>' + (done ? '<span class="pill done">DONE</span>' : '') + '</div>' +
+      '<div class="rv"><b>' + shown.split(' / ')[0] + '</b> / ' + shown.split(' / ')[1] + '</div>' + bar(p, null) +
+      '<div class="btns">' + minus + plus + '</div></div>';
+  });
+  var st = STOP_OF[me];
+  return '<h2>My reps</h2><div class="chips">' + chips + '</div>' +
+    '<div class="who-line"><span class="big">' + me + '</span><span>' + Math.round(personPct(me) * 100) + '% of own share</span></div>' +
+    (st ? '<p class="note">Your sandwich stop: <b>' + esc(st.name) + '</b>, ' + esc(st.addr) + '</p>' : '') +
+    '<div class="list">' + rows + '</div>';
+}
+
+function vTeam(){
+  var order = PEOPLE.slice().sort(function(a, b){ return personPct(b) - personPct(a); });
+  var head = '<tr><th style="text-align:left;padding-left:12px">Name</th>' + GOALS.map(function(g){ return '<th>' + g.short + '</th>'; }).join('') + '<th>All</th></tr>';
+  var body = order.map(function(p){
+    var cells = GOALS.map(function(g){ var x = pct(p, g); return '<td class="c" style="--p:' + x.toFixed(2) + '">' + Math.round(x * 100) + '</td>'; }).join('');
+    return '<tr><td class="nm"><button data-a="who2" data-p="' + p + '">' + p + '</button></td>' + cells + '<td class="tot">' + Math.round(personPct(p) * 100) + '%</td></tr>';
+  }).join('');
+  return '<h2>Team</h2><div class="tw"><table><thead>' + head + '</thead><tbody>' + body + '</tbody></table></div>' +
+    '<p class="note">Each cell is the percent of that person\'s own share. Tap a name to log reps for them. MI miles, PU pull-ups, LB weight, PS push-ups, FT free throws, PZ pizza, DN doughnuts, SW sandwich, WG wings.</p>';
+}
+
+function vGames(){
+  var cards = GAMES.map(function(g){
+    var st = S.games[g.id] || {}, won = st.done === true;
+    var opts = '';
+    if (g.opts) {
+      opts = '<div class="seg">' + g.opts.map(function(o, i){
+        return '<button class="' + (st.opt === o ? 'on' : '') + '" data-a="gopt" data-g="' + g.id + '" data-i="' + i + '">' + esc(o) + '</button>';
+      }).join('') + '</div>';
+    }
+    var by = '<select id="by-' + g.id + '" data-by="' + g.id + '" aria-label="Won by"><option value="">Won by...</option>' +
+      PEOPLE.concat(['Team']).map(function(p){ return '<option' + (st.by === p ? ' selected' : '') + '>' + p + '</option>'; }).join('') + '</select>';
+    return '<div class="game' + (won ? ' won' : '') + '"><div class="rh"><h3>' + esc(g.name) + '</h3><span class="est">' + esc(g.est) + '</span></div>' +
+      '<div class="rule">' + esc(g.rule) + '</div>' + opts +
+      '<div class="grow">' + by + '<button class="go" data-a="gdone" data-g="' + g.id + '">' + (won ? 'Won' : 'Mark won') + '</button></div></div>';
+  }).join('');
+  return '<h2>Games</h2><p class="note">Start Breath of the Wild and Minecraft first. Both are long and only one person can play at a time. Run two setups and rotate people between the controller and the reps.</p><div class="list">' + cards + '</div>';
+}
+
+function vFuel(){
+  var tot = {kcal:0, p:0, c:0, f:0};
+  FOOD.forEach(function(x){ tot.kcal += x.kcal; tot.p += x.p; tot.c += x.c; tot.f += x.f; });
+  var pr = prog(me), eaten = {kcal:0, p:0, c:0, f:0};
+  var share = {pizza:pr.pizza / 8, dough:pr.dough / 5, sand:pr.sand / 1, wings:pr.wings / 15};
+  FOOD.forEach(function(x){
+    var s = Math.min(1, share[x.id] || 0);
+    eaten.kcal += x.kcal * s; eaten.p += x.p * s; eaten.c += x.c * s; eaten.f += x.f * s;
+  });
+  var table = '<div class="macro h"><span>Per person</span><span>kcal</span><span>P g</span><span>C g</span><span>F g</span></div>' +
+    FOOD.map(function(x){ return '<div class="macro"><span>' + esc(x.name) + '</span><span>' + x.kcal.toLocaleString('en-US') + '</span><span>' + x.p + '</span><span>' + x.c + '</span><span>' + x.f + '</span></div>'; }).join('') +
+    '<div class="macro t"><span>Full share</span><span>' + tot.kcal.toLocaleString('en-US') + '</span><span>' + tot.p + '</span><span>' + tot.c + '</span><span>' + tot.f + '</span></div>' +
+    '<div class="macro t"><span>All 7 people</span><span>' + (tot.kcal * 7).toLocaleString('en-US') + '</span><span>' + tot.p * 7 + '</span><span>' + tot.c * 7 + '</span><span>' + tot.f * 7 + '</span></div>';
+  function mb(label, v, t, unit){
+    return '<div class="mb"><span>' + label + '</span>' + bar(Math.min(1, v / t), null) + '<em>' + Math.round(v).toLocaleString('en-US') + ' / ' + t.toLocaleString('en-US') + unit + '</em></div>';
+  }
+  var chips = PEOPLE.map(function(p){ return '<button class="chip' + (p === me ? ' on' : '') + '" data-a="who" data-p="' + p + '">' + p + '</button>'; }).join('');
+  return '<h2>Fuel</h2><div class="row">' + table + '</div>' +
+    '<h2>Eaten so far</h2><div class="chips">' + chips + '</div>' +
+    '<div class="row"><div class="mbars">' + mb('Calories', eaten.kcal, tot.kcal, '') + mb('Protein', eaten.p, tot.p, ' g') + mb('Carbs', eaten.c, tot.c, ' g') + mb('Fat', eaten.f, tot.f, ' g') + '</div></div>' +
+    '<p class="note">These come from the food you log on the My reps tab. Numbers are rough estimates for typical items, and real shops vary. Eat in small portions all day, sip water every 15 minutes, and salt your food. Stop and sit down if anyone feels dizzy or sick.</p>';
+}
+
+function proj(lat, lng){ return {x: (lng + 74.495) * 3800, y: (40.505 - lat) * 5000}; }
+function vMap(){
+  var W = 420, H = 300, svg = '';
+  svg += '<rect width="' + W + '" height="' + H + '" fill="#121821"/>';
+  for (var gx = 0; gx <= W; gx += 60) svg += '<line x1="' + gx + '" y1="0" x2="' + gx + '" y2="' + H + '" stroke="#1d2530" stroke-width="1"/>';
+  for (var gy = 0; gy <= H; gy += 60) svg += '<line x1="0" y1="' + gy + '" x2="' + W + '" y2="' + gy + '" stroke="#1d2530" stroke-width="1"/>';
+  var pe = proj(40.4795, -74.4365), pts = [pe];
+  var stopPts = STOPS.map(function(s){ var q = proj(s.lat, s.lng); return {s:s, x:q.x + s.dx, y:q.y}; });
+  var route = [pe, {x:195, y:proj(40.4955, -74.4438).y}];
+  stopPts.forEach(function(q){ if (q.s.id !== 'bk' && q.s.id !== 'pop') route.push(q); });
+  route.push(pe);
+  svg += '<polyline points="' + route.map(function(q){ return q.x.toFixed(1) + ',' + q.y.toFixed(1); }).join(' ') + '" fill="none" stroke="#ff2e4d" stroke-width="2" stroke-dasharray="6 5" opacity=".75"/>';
+  svg += '<g transform="translate(' + pe.x.toFixed(1) + ',' + pe.y.toFixed(1) + ')"><rect x="-8" y="-8" width="16" height="16" fill="#f4efe6" transform="rotate(45)"/>' +
+    '<text x="14" y="4" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="13" fill="#f4efe6" stroke="#121821" stroke-width="3" paint-order="stroke">Perry Hall</text></g>';
+  stopPts.forEach(function(q, i){
+    var got = S.stops[q.s.id] === true;
+    svg += '<g transform="translate(' + q.x.toFixed(1) + ',' + q.y.toFixed(1) + ')"><circle r="10" fill="' + (got ? '#3fd89a' : '#ff2e4d') + '" stroke="#121821" stroke-width="2"/>' +
+      '<text y="5" text-anchor="middle" font-family="Anton,Impact,sans-serif" font-size="13" fill="' + (got ? '#06241a' : '#fff') + '">' + (i + 1) + '</text>' +
+      '<text x="' + q.s.lx + '" y="' + q.s.ly + '" text-anchor="' + q.s.an + '" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="13" fill="#f4efe6" stroke="#121821" stroke-width="3" paint-order="stroke">' + esc(q.s.name) + '</text></g>';
+  });
+  svg += '<line x1="14" y1="282" x2="86" y2="282" stroke="#f4efe6" stroke-width="2"/><text x="14" y="272" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="12" fill="#99a3b2">1 mile</text>';
+  svg += '<text x="' + (W - 14) + '" y="20" text-anchor="end" font-family="Barlow Condensed,Arial Narrow,sans-serif" font-weight="700" font-size="12" fill="#99a3b2">N ↑</text>';
+  var cards = STOPS.map(function(s, i){
+    var got = S.stops[s.id] === true;
+    return '<div class="stop' + (got ? ' got' : '') + '"><div class="no">' + (i + 1) + '</div>' +
+      '<h3>' + esc(s.name) + '</h3>' +
+      '<div class="meta"><b>' + esc(s.who) + '</b> · about ' + esc(s.mi) + ' mi from Perry Hall<br>' + esc(s.addr) + '<br>Usual hours ' + esc(s.hrs) + '</div>' +
+      '<div class="acts"><a class="dir" href="' + gmapsDir(s.addr) + '" target="_blank" rel="noopener">Directions</a>' +
+      '<button data-a="stop" data-s="' + s.id + '">' + (got ? 'Picked up' : 'Mark picked up') + '</button></div></div>';
+  }).join('');
+  return '<h2>Food run</h2><div class="mapbox"><svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Map of the seven sandwich stops around Perry Hall">' + svg + '</svg></div>' +
+    '<a class="route" href="' + gmapsRoute() + '" target="_blank" rel="noopener">Open full loop in Google Maps</a>' +
+    '<p class="note">Pins are approximate. Numbers follow a suggested loop: George St first, then west, then south, then out to Route 18. Chick-fil-A and Namkeen close at 10 PM. Hours come from Google listings, so check before you drive.</p>' +
+    '<div class="list">' + cards + '</div>';
+}
+
+var VIEWS = {hq:['HQ', vHQ], me:['Reps', vMe], team:['Team', vTeam], games:['Games', vGames], fuel:['Fuel', vFuel], map:['Map', vMap]};
+
+function render(){
+  document.getElementById('main').innerHTML = VIEWS[view][1]();
+  document.getElementById('nav').innerHTML = Object.keys(VIEWS).map(function(k){
+    return '<button class="' + (k === view ? 'on' : '') + '" data-a="nav" data-v="' + k + '">' + VIEWS[k][0] + '</button>';
+  }).join('');
+}
+function setSync(s){
+  syncState = s;
+  var el = document.getElementById('sync');
+  el.textContent = s === 'live' ? 'LIVE SYNC' : 'THIS DEVICE ONLY';
+  el.className = 'sync' + (s === 'live' ? ' live' : '');
+}
+
+/* ---------- status text ---------- */
+function statusText(){
+  var t = now(), left;
+  if (t < START) left = 'Starts ' + new Date(START).toLocaleString('en-US', {weekday:'short', hour:'numeric', minute:'2-digit', timeZone:'America/New_York'});
+  else {
+    var ms = Math.max(0, START + DUR - t), h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
+    left = h + 'h ' + pad(m) + 'm left';
+  }
+  var lines = ['THE 24 · ' + left + ' · team ' + Math.round(teamPct() * 100) + '%'];
+  GOALS.forEach(function(g){
+    var sc = g.scale || 1, tot = g.per * PEOPLE.length;
+    lines.push(g.name.replace(' (no bodyweight)', '') + ': ' + fmt(teamVal(g) * sc, g) + '/' + fmt(tot * sc, g));
+  });
+  lines.push('Games: ' + gamesDone() + '/' + GAMES.length);
+  var left2 = PEOPLE.slice().sort(function(a, b){ return personPct(a) - personPct(b); }).slice(0, 2);
+  lines.push('Furthest behind: ' + left2.join(', '));
+  return lines.join('\n');
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', function(e){
+  var t = e.target.closest('[data-a]');
+  if (!t) return;
+  var a = t.getAttribute('data-a');
+  if (a === 'nav') { view = t.getAttribute('data-v'); render(); window.scrollTo(0, 0); }
+  else if (a === 'who') { me = t.getAttribute('data-p'); lsSet('c24:me', me); render(); }
+  else if (a === 'who2') { me = t.getAttribute('data-p'); lsSet('c24:me', me); view = 'me'; render(); window.scrollTo(0, 0); }
+  else if (a === 'inc') {
+    var g = GOALS.filter(function(x){ return x.id === t.getAttribute('data-g'); })[0];
+    var d = Number(t.getAttribute('data-d')), pr = prog(me);
+    pr[g.id] = r1(Math.max(0, pr[g.id] + d));
+    saveProgress(me); render();
+  }
+  else if (a === 'gopt') {
+    var gm = GAMES.filter(function(x){ return x.id === t.getAttribute('data-g'); })[0];
+    var st = S.games[gm.id] || (S.games[gm.id] = {done:false});
+    st.opt = gm.opts[Number(t.getAttribute('data-i'))];
+    saveShared(); render();
+  }
+  else if (a === 'gdone') {
+    var id = t.getAttribute('data-g'), s2 = S.games[id] || (S.games[id] = {done:false});
+    s2.done = !s2.done;
+    saveShared(); render();
+  }
+  else if (a === 'stop') {
+    var sid = t.getAttribute('data-s');
+    if (S.stops[sid]) delete S.stops[sid]; else S.stops[sid] = true;
+    saveShared(); render();
+  }
+  else if (a === 'copy') {
+    var txt = statusText(), out = document.getElementById('copyout');
+    var show = function(){
+      out.innerHTML = '<textarea class="copybox" id="cbox" readonly></textarea>';
+      var box = document.getElementById('cbox'); box.value = txt; box.focus(); box.select();
+    };
+    try {
+      navigator.clipboard.writeText(txt).then(function(){ out.innerHTML = '<p class="note">Copied. Paste it in the group chat.</p>'; }, show);
+    } catch (err) { show(); }
+  }
+});
+document.addEventListener('change', function(e){
+  var sel = e.target.closest('select[data-by]');
+  if (!sel) return;
+  var id = sel.getAttribute('data-by'), st = S.games[id] || (S.games[id] = {done:false});
+  if (sel.value) st.by = sel.value; else delete st.by;
+  saveShared();
+});
+
+/* ---------- shared sync (db) ---------- */
+function dataOf(d){ if (!d) return null; return typeof d.data === 'function' ? d.data() : d.data; }
+function eachDoc(snap, fn){
+  if (!snap) return;
+  var list = snap.docs || null;
+  if (list) list.forEach(function(d){ fn(d.id, dataOf(d)); });
+  else if (typeof snap.forEach === 'function') snap.forEach(function(d){ fn(d.id, dataOf(d)); });
+}
+(function initDb(){
+  if (typeof claude === 'undefined' || !claude || typeof claude.use !== 'function') return;
+  claude.use('db').then(function(db){
+    if (!db) { setSync('local'); return; }
+    DB = db; setSync('live');
+    var first = true;
+    db.collection('progress').onSnapshot(function(snap){
+      var seen = {};
+      eachDoc(snap, function(id, d){ if (PEOPLE.indexOf(id) > -1 && d) { S.progress[id] = cleanProg(d); seen[id] = true; } });
+      if (first) {
+        first = false;
+        PEOPLE.forEach(function(p){
+          var any = GOALS.some(function(g){ return prog(p)[g.id] > 0; });
+          if (!seen[p] && any) saveProgress(p);
+        });
+      }
+      persistLocal(); render();
+    }, function(){ setSync('local'); });
+    db.doc('meta/shared').onSnapshot(function(s){
+      var d = dataOf(s);
+      if (d) { S.games = cleanGames(d.games); S.stops = cleanStops(d.stops); persistLocal(); render(); }
+    }, function(){ setSync('local'); });
+  }, function(){ setSync('local'); });
+})();
+
+loadLocal();
+render();
+tick();
+setInterval(tick, 1000);
+setInterval(function(){ if (view === 'hq') render(); }, 30000);
+</script>
+</body>
+</html>
