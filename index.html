@@ -141,6 +141,9 @@ h3{font-family:var(--cond);font-weight:700;font-size:20px;margin:0;letter-spacin
 .custom input{flex:1;min-width:0;min-height:44px;background:var(--panel);color:var(--ink);border:1px solid var(--line2);border-radius:10px;padding:0 12px;font:500 16px var(--body)}
 .custom button{min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--line2);background:var(--panel2);font-family:var(--cond);font-weight:700;font-size:16px;letter-spacing:.05em;text-transform:uppercase}
 .custom button.sub{color:var(--mute)}
+.startbtn{min-height:64px;font-size:26px!important;background:linear-gradient(180deg,#ff4561,#e0173a)!important;border-color:#ff6a80!important;color:#fff;box-shadow:0 6px 20px rgba(255,46,77,.4);animation:pulsebtn 1.6s infinite}
+@keyframes pulsebtn{50%{transform:scale(1.015)}}
+.undo{color:var(--mute);min-height:42px!important;font-size:14px!important}
 .cta{width:100%;min-height:50px;border-radius:12px;border:1px solid var(--line2);background:var(--panel2);font-family:var(--cond);font-weight:700;font-size:18px;letter-spacing:.06em;text-transform:uppercase;margin-top:12px}
 textarea.copybox{width:100%;min-height:150px;margin-top:10px;background:var(--panel);color:var(--ink);border:1px solid var(--line2);border-radius:10px;padding:10px;font:14px/1.4 var(--body)}
 
@@ -265,7 +268,8 @@ nav button.on{color:#fff;background:var(--panel2);box-shadow:inset 0 -3px 0 var(
 "use strict";
 var DBURL = 'https://the24hrchallenge-f1ad2-default-rtdb.firebaseio.com';
 var ROOT = 'c24';
-var START = Date.parse('2026-11-24T12:00:00-05:00');
+var PLANNED = Date.parse('2026-11-24T12:00:00-05:00');
+var START = PLANNED;
 var DUR = 24 * 3600 * 1000;
 var HOUR = 3600 * 1000;
 var PEOPLE = ['Sriram','Ryan','Prashanth','Ashvik','Atharva','Rishik','Ishaan'];
@@ -370,9 +374,10 @@ function dur(ms){
   var m = Math.max(0, Math.round(ms / 60000));
   return m < 60 ? m + 'm' : Math.floor(m / 60) + 'h ' + pad(m % 60) + 'm';
 }
-function frac(){ return Math.max(0, Math.min(1, (Date.now() - START) / DUR)); }
-function running(){ var t = Date.now(); return t >= START && t < START + DUR; }
-function hoursLeft(){ return Math.max(0.25, (START + DUR - Math.max(Date.now(), START)) / HOUR); }
+function notStarted(){ return !S.start; }
+function frac(){ return notStarted() ? 0 : Math.max(0, Math.min(1, (Date.now() - START) / DUR)); }
+function running(){ var t = Date.now(); return !notStarted() && t >= START && t < START + DUR; }
+function hoursLeft(){ return notStarted() ? 24 : Math.max(0.25, (START + DUR - Math.max(Date.now(), START)) / HOUR); }
 function prog(p){ if (!S.progress[p]) S.progress[p] = cleanProg({}); return S.progress[p]; }
 function pct(p, g){ return Math.min(1, prog(p)[g.id] / g.per); }
 function teamVal(g){ var t = 0; PEOPLE.forEach(function(p){ t += prog(p)[g.id]; }); return t; }
@@ -387,7 +392,7 @@ function teamPct(){
 function status(p){
   var f = frac();
   if (p >= 1) return {c:'done', t:'DONE'};
-  if (Date.now() < START) return {c:'', t:'NOT STARTED'};
+  if (notStarted()) return {c:'', t:'NOT STARTED'};
   if (p >= f - 0.08) return {c:'ok', t:'ON PACE'};
   if (p >= f - 0.25) return {c:'warn', t:'SLIPPING'};
   return {c:'bad', t:'BEHIND'};
@@ -436,7 +441,7 @@ function cleanGame(v, g){
 }
 function cleanAll(d){
   d = d || {};
-  var out = {progress:{}, games:{}, stops:{}, setups:{}, log:[]};
+  var out = {progress:{}, games:{}, stops:{}, setups:{}, log:[], start: num(d.start)};
   PEOPLE.forEach(function(p){ out.progress[p] = cleanProg(d.progress && d.progress[p]); });
   GAMES.forEach(function(g){ if (d.games && d.games[g.id]) out.games[g.id] = cleanGame(d.games[g.id], g); });
   STOPS.forEach(function(s){ if (d.stops && d.stops[s.id] === true) out.stops[s.id] = true; });
@@ -482,6 +487,7 @@ function applyRemote(raw){
   lastRemote = key;
   var prevLog = S.log.length ? S.log[0].t : 0;
   S = cleanAll(raw);
+  START = S.start || PLANNED;
   if (S.log.length && S.log[0].t > prevLog && prevLog) freshAfter = prevLog;
   render();
 }
@@ -537,6 +543,18 @@ function toggleStop(id){
   if (on) logEvent(STOP_OF_ID(id).who, 'picked up from ' + STOP_OF_ID(id).name);
 }
 function STOP_OF_ID(id){ return STOPS.filter(function(s){ return s.id === id; })[0]; }
+function startNow(){
+  var t = Date.now();
+  S.start = t; START = t; lastMark = -1;
+  send('PUT', 'start', t);
+  logEvent(me, 'started the 24 hour timer');
+  confetti(160); chime(); buzz([60, 40, 60]);
+}
+function undoStart(){
+  S.start = 0; START = PLANNED; lastMark = -1;
+  send('PUT', 'start', null);
+  logEvent(me, 'reset the timer');
+}
 function setSetup(k, who){
   if (who) { S.setups[k] = {who:who, since:Date.now()}; send('PUT', 'setups/' + k, S.setups[k]); logEvent(who, 'took Setup ' + k); }
   else { delete S.setups[k]; send('PUT', 'setups/' + k, null); }
@@ -604,7 +622,7 @@ function alarmTick(){
 /* ---------- timer ---------- */
 function tick(){
   var t = Date.now(), ms, label;
-  if (t < START) { ms = START - t; label = 'Starts in'; }
+  if (notStarted()) { ms = Math.max(0, PLANNED - t); label = t < PLANNED ? 'Planned start' : 'Ready'; }
   else if (t < START + DUR) { ms = START + DUR - t; label = 'Time left'; }
   else { ms = 0; label = 'Final'; }
   var s = Math.floor(ms / 1000), d = Math.floor(s / 86400);
@@ -624,7 +642,7 @@ function tick(){
 /* ---------- views ---------- */
 function stripHtml(){
   var hrs = Math.floor(frac() * 24), cells = '';
-  for (var i = 0; i < 24; i++) cells += '<i class="' + (Date.now() < START ? '' : (i < hrs ? 'past' : (i === hrs && running() ? 'now' : ''))) + '"></i>';
+  for (var i = 0; i < 24; i++) cells += '<i class="' + (notStarted() ? '' : (i < hrs ? 'past' : (i === hrs && running() ? 'now' : ''))) + '"></i>';
   return '<div class="strip">' + cells + '</div><div class="slab"><span>12 PM</span><span>6 PM</span><span>12 AM</span><span>6 AM</span><span>12 PM</span></div>';
 }
 function foodWatch(){
@@ -651,16 +669,18 @@ function vHQ(){
     if (running() && p < 1) need = '<span class="need">need ' + fmt(((tot - v) / hoursLeft()) * sc, g.dec ? {dec:1} : null) + '/hr</span>';
     rows += '<div class="card row"><div class="rh"><span class="rn">' + esc(g.name) + '</span><span class="pill ' + st.c + '">' + st.t + '</span></div>' +
       '<div class="rv"><span><b>' + fmt(v * sc, g) + '</b> / ' + fmt(tot * sc, g) + ' <small>' + esc(g.unit) + '</small></span>' + need + '</div>' +
-      bar(p, Date.now() < START ? null : f) + '</div>';
+      bar(p, notStarted() ? null : f) + '</div>';
   });
   var gd = gamesDone(), gp = gd / GAMES.length, gst = status(gp);
   rows += '<div class="card row"><div class="rh"><span class="rn">Games won</span><span class="pill ' + gst.c + '">' + gst.t + '</span></div>' +
-    '<div class="rv"><span><b>' + gd + '</b> / ' + GAMES.length + '</span></div>' + bar(gp, Date.now() < START ? null : f) + '</div>';
+    '<div class="rv"><span><b>' + gd + '</b> / ' + GAMES.length + '</span></div>' + bar(gp, notStarted() ? null : f) + '</div>';
   var order = PEOPLE.slice().sort(function(a, b){ return personPct(b) - personPct(a); });
   var tp = Math.round(teamPct() * 100);
-  var kicker = Date.now() < START ? 'Tue Nov 24, 12 PM' : (running() ? 'Elapsed ' + Math.round(f * 100) + '%' : 'Wed Nov 25, 12 PM');
+  var endTxt = new Date(START + DUR).toLocaleString('en-US', {weekday:'short', hour:'numeric', minute:'2-digit', timeZone:'America/New_York'});
+  var kicker = notStarted() ? 'Planned Tue 12 PM' : (running() ? 'Ends ' + endTxt + ' · ' + Math.round(f * 100) + '%' : 'Ended ' + endTxt);
   return '<div class="card hero"><div class="ringbox">' + ring(teamPct(), 150, 14) + '<div class="rc"><b>' + tp + '%</b><span>team</span></div></div>' +
     '<div><div class="hl" id="bigl">Starts in</div><div class="bigclock" id="bigclock">--:--:--</div><div class="kick">' + kicker + '</div></div></div>' +
+    (notStarted() ? '<button class="cta startbtn" data-a="start">Start the 24 now</button><p class="note">Tap when you actually begin. The timer starts for everyone and the 24 hours run from that moment.</p>' : '') +
     stripHtml() +
     '<div class="tiles"><div class="card tile"><div class="k">Games</div><div class="v">' + gd + '<small> / ' + GAMES.length + '</small></div></div>' +
     '<div class="card tile"><div class="k">Leader</div><div class="v" style="font-size:24px;padding-top:4px">' + esc(order[0]) + '</div></div>' +
@@ -669,7 +689,8 @@ function vHQ(){
     '<h2>Live feed</h2><div class="card">' + feedHtml() + '</div>' +
     '<h2>Scoreboard</h2><div class="list">' + rows + '</div>' +
     '<p class="note">The white tick on each bar is where the team should be right now if the work is spread evenly over all 24 hours.</p>' +
-    '<button class="cta" data-a="copy">Copy status for the group chat</button><div id="copyout"></div>';
+    '<button class="cta" data-a="copy">Copy status for the group chat</button><div id="copyout"></div>' +
+    (notStarted() ? '' : '<button class="cta undo" data-a="unstart">Reset timer</button>');
 }
 
 function chipsHtml(sticky){
@@ -805,7 +826,7 @@ function vFood(){
 }
 
 function vPlan(){
-  var hi = running() ? Math.floor((Date.now() - START) / HOUR) : (Date.now() < START ? -1 : 24);
+  var hi = running() ? Math.floor((Date.now() - START) / HOUR) : (notStarted() ? -1 : 24);
   var rows = PLAN.map(function(x, i){
     var d = new Date(START + i * HOUR);
     var label = d.toLocaleString('en-US', {hour:'numeric', timeZone:'America/New_York'});
@@ -832,7 +853,7 @@ function render(){
 /* ---------- status text ---------- */
 function statusText(){
   var t = Date.now(), left;
-  if (t < START) left = 'starts Tue 12 PM';
+  if (notStarted()) left = 'not started yet';
   else { var ms = Math.max(0, START + DUR - t); left = Math.floor(ms / 3600000) + 'h ' + pad(Math.floor((ms % 3600000) / 60000)) + 'm left'; }
   var lines = ['THE 24 · ' + left + ' · team ' + Math.round(teamPct() * 100) + '%'];
   GOALS.forEach(function(g){
@@ -851,6 +872,8 @@ document.addEventListener('click', function(e){
   if (!t) return;
   var a = t.getAttribute('data-a');
   if (a === 'nav') { view = t.getAttribute('data-v'); render(); window.scrollTo(0, 0); if (view === 'plan') { var n = document.getElementById('plan-now'); if (n) n.scrollIntoView({block:'center'}); } }
+  else if (a === 'start') { if (confirm('Start the 24 hour timer for everyone right now?')) { startNow(); render(); } }
+  else if (a === 'unstart') { if (confirm('Reset the timer back to not started for everyone?')) { undoStart(); render(); } }
   else if (a === 'who') { me = t.getAttribute('data-p'); persist(); render(); }
   else if (a === 'who2') { me = t.getAttribute('data-p'); persist(); view = 'me'; render(); window.scrollTo(0, 0); }
   else if (a === 'custom') {
