@@ -137,6 +137,10 @@ h3{font-family:var(--cond);font-weight:700;font-size:20px;margin:0;letter-spacin
 .setcard .sc-t{font-family:var(--cond);font-weight:700;font-size:12px;letter-spacing:.14em;color:var(--ember);text-transform:uppercase}
 .setcard .sc-b{font-family:var(--cond);font-weight:700;font-size:21px}
 .setcard .sc-b span{color:var(--mute);font-weight:500;font-size:15px}
+.custom{display:flex;gap:8px;margin-top:8px}
+.custom input{flex:1;min-width:0;min-height:44px;background:var(--panel);color:var(--ink);border:1px solid var(--line2);border-radius:10px;padding:0 12px;font:500 16px var(--body)}
+.custom button{min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--line2);background:var(--panel2);font-family:var(--cond);font-weight:700;font-size:16px;letter-spacing:.05em;text-transform:uppercase}
+.custom button.sub{color:var(--mute)}
 .cta{width:100%;min-height:50px;border-radius:12px;border:1px solid var(--line2);background:var(--panel2);font-family:var(--cond);font-weight:700;font-size:18px;letter-spacing:.06em;text-transform:uppercase;margin-top:12px}
 textarea.copybox{width:100%;min-height:150px;margin-top:10px;background:var(--panel);color:var(--ink);border:1px solid var(--line2);border-radius:10px;padding:10px;font:14px/1.4 var(--body)}
 
@@ -285,8 +289,8 @@ var GAMES = [
   {id:'fn', name:'Fortnite', rule:'Pick one', opts:['Solo win','Squad win with 15+ kills combined'], est:'30 min to 3+ hr'},
   {id:'mc', name:'Minecraft', rule:'Beat the Ender Dragon. Everyone can play together on one server', est:'1.5 to 4 hr'},
   {id:'ssb', name:'Smash', rule:'1v2 vs level 9 CPUs', est:'30 min to 2 hr'},
-  {id:'botw', name:'Breath of the Wild', rule:'Beat Ganon. Start right after the Great Plateau', est:'1 to 4 hr'},
-  {id:'puz', name:'Puzzle', rule:'Finish it', est:'30 to 60 min'},
+  {id:'ars', name:'Roblox Arsenal', rule:'Finish first place', est:'20 to 60 min'},
+  {id:'fg', name:'Fall Guys', rule:'Win a crown', est:'20 to 60 min'},
   {id:'doors', name:'Roblox Doors', rule:'Reach door 100 and beat it', est:'45 min to 2 hr'}
 ];
 var GAME_OF = {}; GAMES.forEach(function(g){ GAME_OF[g.id] = g; });
@@ -312,7 +316,7 @@ var FOOD = [
 
 /* hour-by-hour plan, offset 0 = noon Tuesday. A suggestion, not a rule. */
 var PLAN = [
-  ['Kickoff','Start Breath of the Wild and Minecraft. Everyone else lifts, legs and back first.'],
+  ['Kickoff','Start Minecraft and Roblox Doors. Everyone else lifts, legs and back first.'],
   ['Lift block','Keep lifting in pairs. Log pounds as you go. Push-up sets every 15 minutes.'],
   ['Food run 1','Burger King and Popeyes on George St, plus McDonald\'s. Daylight miles can start.'],
   ['Daylight miles','Run or walk outside while it is light. About 2.5 miles each gets you halfway.'],
@@ -321,12 +325,12 @@ var PLAN = [
   ['Last food run','Namkeen and Wendy\'s. Namkeen closes at 10 PM. Place the pizza order.'],
   ['Pizza','Pick up and eat. Rocket League and Fortnite go on.'],
   ['Smash block','1v2 against level 9 CPUs. Pull-up sets in between.'],
-  ['Puzzle','Start the puzzle. Low effort, good while eating.'],
+  ['Fall Guys','Start Fall Guys. Low effort, good while eating.'],
   ['Wings','Wings are due. Chick-fil-A and Namkeen are closed after 10 PM, so those sandwiches must be done.'],
   ['Indoor miles','If it is cold, finish miles on a treadmill or laps indoors.'],
   ['Midnight check','Open HQ and compare against the white pace ticks. Doughnuts.'],
-  ['Night grind','Easy games and the puzzle. Push-up sets continue. 20 minute naps in rotation.'],
-  ['Night grind','Finish the puzzle. Rotate who is on the controllers.'],
+  ['Night grind','Easy games like Fall Guys and Arsenal. Push-up sets continue. 20 minute naps in rotation.'],
+  ['Night grind','Keep chasing the crown. Rotate who is on the controllers.'],
   ['Night grind','Stay fed and sip water. Salt your food. Nobody works out alone.'],
   ['Night grind','Rotate players on the long games. Check who is furthest behind.'],
   ['Night grind','Push-up catch-up. Short sets only.'],
@@ -681,7 +685,8 @@ function vMe(){
     }).join('');
     var left = g.id === 'pizza' ? r1(v) + '</b> / ' + g.per + ' <small>slices</small>' : fmt(v, g) + '</b> / ' + fmt(g.per, g) + ' <small>' + esc(g.unit) + '</small>';
     rows += '<div class="card row"><div class="rh"><span class="rn">' + esc(g.name) + '</span>' + (done ? '<span class="pill done">DONE</span>' : '') + '</div>' +
-      '<div class="rv"><span><b>' + left + '</span></div>' + bar(p, null) + '<div class="btns">' + minus + plus + '</div></div>';
+      '<div class="rv"><span><b>' + left + '</span></div>' + bar(p, null) + '<div class="btns">' + minus + plus + '</div>' +
+      '<div class="custom"><input class="cin" id="cin-' + g.id + '" type="number" inputmode="decimal" min="0" step="any" placeholder="Own amount" aria-label="Custom amount for ' + esc(g.name) + '"><button data-a="custom" data-g="' + g.id + '" data-s="1">Add</button><button data-a="custom" data-g="' + g.id + '" data-s="-1" class="sub">Remove</button></div></div>';
   });
   var st = STOP_OF[me];
   var setHtml = '';
@@ -812,7 +817,12 @@ function vPlan(){
 
 var VIEWS = {hq:['HQ', vHQ], me:['Reps', vMe], team:['Team', vTeam], games:['Games', vGames], food:['Food', vFood], plan:['Plan', vPlan]};
 function render(){
+  var saved = {}, focusId = null, ae = document.activeElement;
+  Array.prototype.forEach.call(document.querySelectorAll('.cin'), function(i){ if (i.value) saved[i.id] = i.value; });
+  if (ae && ae.classList && ae.classList.contains('cin')) focusId = ae.id;
   document.getElementById('main').innerHTML = VIEWS[view][1]();
+  Object.keys(saved).forEach(function(id){ var e = document.getElementById(id); if (e) e.value = saved[id]; });
+  if (focusId) { var f = document.getElementById(focusId); if (f) f.focus(); }
   document.getElementById('nav').innerHTML = Object.keys(VIEWS).map(function(k){
     return '<button class="' + (k === view ? 'on' : '') + '" data-a="nav" data-v="' + k + '">' + VIEWS[k][0] + '</button>';
   }).join('');
@@ -843,6 +853,16 @@ document.addEventListener('click', function(e){
   if (a === 'nav') { view = t.getAttribute('data-v'); render(); window.scrollTo(0, 0); if (view === 'plan') { var n = document.getElementById('plan-now'); if (n) n.scrollIntoView({block:'center'}); } }
   else if (a === 'who') { me = t.getAttribute('data-p'); persist(); render(); }
   else if (a === 'who2') { me = t.getAttribute('data-p'); persist(); view = 'me'; render(); window.scrollTo(0, 0); }
+  else if (a === 'custom') {
+    var cid = t.getAttribute('data-g'), inp = document.getElementById('cin-' + cid), cg = GOAL_OF[cid];
+    var raw = inp ? Number(inp.value) : 0;
+    if (isFinite(raw) && raw > 0) {
+      var amt = cg.id === 'pizza' ? raw : raw;
+      addReps(me, cid, Number(t.getAttribute('data-s')) * (cg.dec ? r1(amt) : Math.round(amt)));
+      inp.value = '';
+      render();
+    }
+  }
   else if (a === 'inc') { addReps(me, t.getAttribute('data-g'), Number(t.getAttribute('data-d'))); render(); }
   else if (a === 'gopt') { var gm = GAME_OF[t.getAttribute('data-g')]; patchGame(gm.id, {opt: gm.opts[Number(t.getAttribute('data-i'))]}); render(); }
   else if (a === 'gdone') {
